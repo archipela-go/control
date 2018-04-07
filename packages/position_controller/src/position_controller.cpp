@@ -8,6 +8,7 @@
 #include <angles/angles.h>
 #include <stdlib.h>
 #include <math.h>
+#define PI 3.14159
 
 float currPos[3];
 float currVel[3]; //xdot, ydot, zdot
@@ -68,7 +69,7 @@ int main(int argc, char **argv) {
 
 	while (ros::ok()) {
 		//calculate speed
-		double U = sqrt(pow(currVel[0], 2) + pow(currVel[1], 2));
+		/*double U = sqrt(pow(currVel[0], 2) + pow(currVel[1], 2));
 
 		//calculate angle of velocity vector(CHECK)
 		double vel_angle = atan2(currVel[1], currVel[0]);
@@ -76,7 +77,33 @@ int main(int argc, char **argv) {
 		double alpha = atan2((desPos[1] - oldDesPos[1]), (desPos[0] - oldDesPos[0]));
 
 		double s = (currPos[0] - oldDesPos[0])*cos(alpha) + (currPos[1] - oldDesPos[1])*sin(alpha);
-		double e = -(currPos[0] - oldDesPos[0])*sin(alpha) + (currPos[1] - oldDesPos[1])*cos(alpha);
+		double e = -(currPos[0] - oldDesPos[0])*sin(alpha) + (currPos[1] - oldDesPos[1])*cos(alpha);*/
+		
+		mavros_msgs::AttitudeTarget att;
+
+		//double desAng = angles::normalize_angle_positive(atan2((desPos[1] - currPos[1]), (desPos[0], currPos[0])));
+
+		double desAng = atan2((desPos[1] - currPos[1]), (desPos[0], currPos[0]));
+
+		double desYaw = desAng - currEuler[2];
+
+		if (abs(desYaw) >=  (PI/2)) {
+			desYaw = desYaw + PI;
+		} 
+
+		double old_dist_error = dist_error;
+
+		double dist_error = sqrt(pow(((desPos[1] - currPos[1]), 2))) + pow(((desPos[0] - currPos[0]), 2)));
+
+		double dt = ros::Time::now() - time;
+		time = ros::Time::now();
+
+		double thrust = Kp*dist_error + Kd*((dist_error - old_dist_error) / dt);
+
+		tf::Quaternion desOrient = tf::createQuaternionFromRPY(0, 0, desYaw);
+
+		att.orientation = desOrient;
+		att.thrust = thrust;
 
 		//page 269
 
