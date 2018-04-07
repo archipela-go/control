@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   tf
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -57,12 +58,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
+add_service_files(
+   FILES
+   Float.srv
+)
+generate_messages()
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
@@ -106,10 +106,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES trajectory_generator
-#  CATKIN_DEPENDS geometry_msgs mavros_msgs roscpp rospy sensor_msgs tf
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES trajectory_generator
+  CATKIN_DEPENDS geometry_msgs mavros_msgs roscpp rospy sensor_msgs tf message_generation message_runtime
+  # DEPENDS system_lib
 )
 
 ###########
