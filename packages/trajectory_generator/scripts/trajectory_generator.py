@@ -7,7 +7,6 @@ import numpy as np
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
-
 class trajectory_generator(object):
     def __init__(self):
         rospy.init_node('trajectory_generator')
