@@ -16,7 +16,9 @@ float desPos[3];
 float oldDesPos[3];
 double currEuler[3]; //rol, pitch, yaw
 double desEuler[3]; //roll, ptich, yaw
-int firstTime; 
+int firstTime;
+double Kp = 0.0;
+double Kd = 0.0;
 
 
 
@@ -67,6 +69,9 @@ int main(int argc, char **argv) {
 
 	firstTime = 1;
 
+    ros::Time time = ros::Time::now();
+    double dist_error = 0.0;
+
 	while (ros::ok()) {
 		//calculate speed
 		/*double U = sqrt(pow(currVel[0], 2) + pow(currVel[1], 2));
@@ -78,32 +83,43 @@ int main(int argc, char **argv) {
 
 		double s = (currPos[0] - oldDesPos[0])*cos(alpha) + (currPos[1] - oldDesPos[1])*sin(alpha);
 		double e = -(currPos[0] - oldDesPos[0])*sin(alpha) + (currPos[1] - oldDesPos[1])*cos(alpha);*/
-		
-		mavros_msgs::AttitudeTarget att;
+
+		auto att = boost::make_shared<mavros_msgs::AttitudeTarget>();
 
 		//double desAng = angles::normalize_angle_positive(atan2((desPos[1] - currPos[1]), (desPos[0], currPos[0])));
 
 		double desAng = atan2((desPos[1] - currPos[1]), (desPos[0], currPos[0]));
 
-		double desYaw = desAng - currEuler[2];
-
-		if (abs(desYaw) >=  (PI/2)) {
-			desYaw = desYaw + PI;
-		} 
+		//double desYaw = desAng - currEuler[2];
+        double desYaw = desAng;
 
 		double old_dist_error = dist_error;
 
-		double dist_error = sqrt(pow(((desPos[1] - currPos[1]), 2))) + pow(((desPos[0] - currPos[0]), 2)));
+		dist_error = sqrt(pow(desPos[1] - currPos[1], 2) + pow(desPos[0] - currPos[0], 2));
 
-		double dt = ros::Time::now() - time;
-		time = ros::Time::now();
+		double dt = (ros::Time::now() - time).toSec();
+        time = ros::Time::now();
 
 		double thrust = Kp*dist_error + Kd*((dist_error - old_dist_error) / dt);
 
+        if (thrust >= 0.5) {
+          thrust = 0.5;
+        } else if (thrust <= 0.5) {
+          thrust = -0.5;
+        }
+
+		if (abs(desYaw) >=  (PI/2)) {
+			desYaw = desYaw + PI;
+            thrust = -thrust;
+		}
+
 		tf::Quaternion desOrient = tf::createQuaternionFromRPY(0, 0, desYaw);
 
-		att.orientation = desOrient;
-		att.thrust = thrust;
+        att->orientation.x = desOrient[0];
+        att->orientation.y = desOrient[1];
+        att->orientation.z = desOrient[2];
+		att->orientation.w = desOrient[3];
+		att->thrust = thrust;
 
 		//page 269
 
