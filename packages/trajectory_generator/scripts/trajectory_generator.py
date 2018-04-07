@@ -5,7 +5,7 @@ import rospy
 import tf
 import numpy as np
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Pose
 from sensor_msgs.msg import Imu
 from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_matrix
 from std_srvs.srv import Trigger
@@ -30,7 +30,7 @@ class trajectory_generator(object):
         self.imu_set = False
         self.imu_q = None
 
-        self.pos_sub = rospy.Subscriber("/mavros/gloabl_position/local", PoseWithCovarianceStamped, self.pos_cb)
+        self.pos_sub = rospy.Subscriber("/mavros/global_position/local", PoseWithCovarianceStamped, self.pos_cb)
         self.pos_set = False
         self.gps_pos = None
         self.gps_q = None
@@ -45,7 +45,7 @@ class trajectory_generator(object):
         self.t0 = 0.0
 
         self.pos_pub = rospy.Publisher("position_cmd", PoseStamped, queue_size = 10)
-
+        self.path_pub = rospy.Publisher("path", Path, queue_size=10)
     def imu_cb(self, data):
         q = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
 
@@ -99,12 +99,32 @@ class trajectory_generator(object):
 
             coeffs_y = np.linalg.solve(A_y, b_y)
 
+            self.coeffs_x = coeffs_x
+            self.coeffs_y = coeffs_y
+
+            myPath = Path()
+            myPath.header.frame_id = 'map'
+            pose_list = []
+            for i in xrange(50):
+                t = self.T * i / 50.0
+
+                x_des = self.coeffs_x[0] + self.coeffs_x[1]*t + self.coeffs_x[2]*t**2 + self.coeffs_x[3]*t**3
+                y_des = self.coeffs_y[0] + self.coeffs_y[1]*t + self.coeffs_y[2]*t**2 + self.coeffs_y[3]*t**3
+
+                loc = PoseStamped()
+                loc.header.frame_id = 'map'
+                loc.pose.position.x = x_des
+                loc.pose.position.y = y_des
+
+                pose_list.append(loc)
+
+            myPath.poses = pose_list
+            self.path_pub.publish(myPath)
+
+
             print "T: " + str(self.T)
             print "coeffs_x: " + str(coeffs_x)
             print "coeffs_y: " + str(coeffs_y)
-
-            self.coeffs_x = coeffs_x
-            self.coeffs_y = coeffs_y
 
             self.generated = True
 
